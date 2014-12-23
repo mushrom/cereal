@@ -38,7 +38,13 @@ int main( void ){
 
 		state = !state;
 
+#if ENABLE_INPUT
+		DEBUGF( "[%s] character? > ", __func__ );
+		DEBUGF( "got character \'0x%x\'\r\n", get_cereal_char( ));
+#else
 		delay_ms( 100 );
+#endif
+
 	}
 
 	return 0;

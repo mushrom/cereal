@@ -9,10 +9,14 @@
 #define set_high( port, pin ) (port |=  (_BV(pin)))
 #define set_low( port, pin )  (port &= ~(_BV(pin)))
 #define set_alt( port, pin )  (port ^=  (_BV(pin)))
-#define read_pin( port, pin ) ((port & (_BV(pin))) == 0 )
+#define read_pin( port, pin ) (port & (_BV(pin)))
 
 volatile uint16_t cur_char = 0;
 volatile uint8_t bitpos = 0;
+volatile uint16_t rx_char = 0;
+volatile uint8_t rx_last_char = 0;
+volatile uint8_t rx_have_char = 0;
+volatile uint8_t rx_pos = 0;
 
 void init_cereal( void ){
 	cli( );
@@ -39,10 +43,10 @@ void init_cereal( void ){
 	// enable timer0a interrupt
 	TIMSK  |= _BV(OCIE0A);
 
-	// Set up output pin
-	DDRB  |= _BV( CEREAL_PIN ) ;
-	PORTB |= _BV( CEREAL_PIN );
-	set_high( PORTB, CEREAL_PIN );
+	// Set up pins
+	DDRB  |=  _BV( CEREAL_PIN );
+	DDRB  &= ~_BV( CER_INPUT_PIN );
+	PORTB |=  _BV( CEREAL_PIN ) | _BV( CER_INPUT_PIN );
 
 	sei( );
 }
@@ -63,8 +67,43 @@ ISR( TIMER0_COMPA_vect ){
 		set_high( PORTB, CEREAL_PIN );
 	}
 
+#if ENABLE_INPUT
+	unsigned rx_state = !!read_pin( PINB, CER_INPUT_PIN );
+
+	// check for start bit
+	if ( rx_state == 0 && rx_pos == 0 ){
+		rx_char = 0;
+		rx_pos++;
+
+	// read each data bit
+	} else if ( rx_pos > 0 && rx_pos < 9 ){
+		rx_char |= rx_state << rx_pos;
+		rx_pos++;
+
+	// check for stop bit
+	} else if ( rx_state == 1 && rx_pos == 9 ){
+		rx_last_char = rx_char >> 1;
+		rx_pos = 0;
+		rx_have_char = 1;
+
+	// just restart if it's not valid
+	} else {
+		rx_pos  = 0;
+	}
+#endif
+
 	TCNT0 = 0;
 }
+
+#if ENABLE_INPUT
+uint8_t get_cereal_char( ){
+	// wait for full character
+	while ( !rx_have_char );
+	rx_have_char = 0;
+
+	return rx_last_char;
+}
+#endif
 
 void put_cereal_char( char c ){
 	// wait for current char to finish

@@ -4,18 +4,24 @@
 #include <stdint.h>
 
 // config options
-#define CEREAL_PIN PB0
-#define BAUD_RATE  BAUD_9600
+#define CEREAL_PIN    PB0
+#define CER_INPUT_PIN PB2
+#define BAUD_RATE     BAUD_9600
+
+// sorted from most to least reliable
+#define BAUD_600    207
+#define BAUD_1200   103
+#define BAUD_2400   51
+#define BAUD_4800   25
+#define BAUD_9600   12
 
 #ifndef DEBUG
 #define DEBUG 1
 #endif
 
-// sorted from most to least reliable
-#define BAUD_1200   103
-#define BAUD_2400   51
-#define BAUD_4800   25
-#define BAUD_9600   12
+#ifndef ENABLE_INPUT
+#define ENABLE_INPUT 0
+#endif
 
 // macros, so that debugging statements can be easily stripped out
 #if DEBUG
@@ -34,6 +40,10 @@ void put_cereal_str( char *s );
 void put_cereal_int( uint16_t n );
 void put_cereal_hex( uint16_t n );
 void init_cereal( void );
+
+#if ENABLE_INPUT
+uint8_t get_cereal_char( );
+#endif
 
 #else
 #define INIT_DEBUG( )          /* init_cereal( ); */
